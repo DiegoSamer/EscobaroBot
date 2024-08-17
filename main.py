@@ -52,7 +52,7 @@ async def send_message():
 
 async def create_initial_embed():
     # Подключаемся к базе данных и получаем время отката для каждого контракта
-    conn = sqlite3.connect('escdb.db')
+    conn = sqlite3.connect(r'\escdb.db')
     cursor = conn.cursor()
 
     cursor.execute('SELECT Rollback FROM Meet WHERE ROWID = (SELECT MAX(ROWID) FROM Meet)')

@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 5000
 
 # Команда для запуска вашего приложения
-CMD ["python", "22.py"]
+CMD ["python", "main.py"]
