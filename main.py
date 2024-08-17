@@ -32,12 +32,12 @@ async def on_ready():
     send_message.start()  # Запускаем задачу отправки сообщения
 
 
-@tasks.loop(minutes=10)  # Проверяем время каждую минуту
+@tasks.loop(minutes=1)  # Проверяем время каждую минуту
 async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 16:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 6 and moscow_time.minute == 0:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
