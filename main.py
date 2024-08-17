@@ -49,10 +49,10 @@ async def send_message():
         else:
             print(f"Не удалось найти канал с ID {config['channel_id']}")
 
-
+db_path = '/mount/dir/escdb.db'
 async def create_initial_embed():
     # Подключаемся к базе данных и получаем время отката для каждого контракта
-    conn = sqlite3.connect('escdb.db')
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     cursor.execute('SELECT Rollback FROM Meet WHERE ROWID = (SELECT MAX(ROWID) FROM Meet)')
