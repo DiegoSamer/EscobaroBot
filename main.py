@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 import pytz
 import sqlite3
 
-
 load_dotenv()
 
 config = {
@@ -32,12 +31,12 @@ async def on_ready():
     send_message.start()  # Запускаем задачу отправки сообщения
 
 
-@tasks.loop(minutes=10)  # Проверяем время каждую минуту
+@tasks.loop(minutes=1)  # Проверяем время каждую минуту
 async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 11:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 1:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
@@ -581,7 +580,6 @@ class ContractControlView(discord.ui.View):
         cursor = conn.cursor()
         cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
         registered_users = {row[0] for row in cursor.fetchall()}
-
         # Проверяем, записан ли пользователь
         if user_ping in registered_users:
             end_time = datetime.now(pytz.timezone('Europe/Moscow'))
@@ -637,12 +635,11 @@ class ContractControlView(discord.ui.View):
             # Обновление таблицы Stat
             num_registered_users = len(registered_users)
             add_value = 1 / num_registered_users if num_registered_users > 0 else 0
-
             for user in registered_users:
                 cursor.execute('SELECT Meet FROM Stat WHERE Worker = ? AND Month = ?', (user, current_month))
                 meet_row = cursor.fetchone()
                 if meet_row:
-                    current_value = (int(meet_row[0]) if meet_row and meet_row[0] is not None else 0) + 1
+                    current_value = (float(meet_row[0]) if meet_row and meet_row[0] is not None else 0) + add_value
                     cursor.execute('UPDATE Stat SET Meet = ? WHERE Worker = ? AND Month = ?',
                                    (current_value, user, current_month))
                 else:
@@ -741,18 +738,19 @@ class View2(discord.ui.View):
 
             # Обновление таблицы Stat
             num_registered_users = len(registered_users)
-            add_value = 1 / num_registered_users if num_registered_users > 0 else 0
-
+            add_value = 1 / num_registered_users
             for user in registered_users:
                 cursor.execute('SELECT Trash FROM Stat WHERE Worker = ? AND Month = ?', (user, current_month))
-                meet_row = cursor.fetchone()
-                if meet_row:
-                    current_value = (int(meet_row[0]) if meet_row and meet_row[0] is not None else 0) + 1
+                trash_row = cursor.fetchone()
+                if trash_row:
+                    current_value = (float(trash_row[0]) if trash_row and trash_row[0] is not None else 0) + add_value
                     cursor.execute('UPDATE Stat SET Trash = ? WHERE Worker = ? AND Month = ?',
                                    (current_value, user, current_month))
+                    print("1")
                 else:
                     cursor.execute('INSERT INTO Stat (Worker, Month, Trash) VALUES (?, ?, ?)',
                                    (user, current_month, add_value))
+                    print("2")
                 conn.commit()
 
             conn.close()
