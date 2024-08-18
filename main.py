@@ -32,12 +32,12 @@ async def on_ready():
     send_message.start()  # Запускаем задачу отправки сообщения
 
 
-@tasks.loop(minutes=1)  # Проверяем время каждую минуту
+@tasks.loop(minutes=10)  # Проверяем время каждую минуту
 async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 18:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 11:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
@@ -52,7 +52,7 @@ async def send_message():
 
 async def create_initial_embed():
     # Подключаемся к базе данных и получаем время отката для каждого контракта
-    conn = sqlite3.connect('escdb.db')
+    conn = sqlite3.connect(r'/escdb/escdb.db')
     cursor = conn.cursor()
 
     cursor.execute('SELECT Rollback FROM Meet WHERE ROWID = (SELECT MAX(ROWID) FROM Meet)')
