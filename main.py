@@ -42,7 +42,7 @@ async def send_message():
         if channel:
             embed = await create_initial_embed()
             view = MyView()
-            message = f'<@&879192631060606998>'  # Добавляем пинг роли в начало сообщения
+            message = f'<@&1176169070400376862>'  # Добавляем пинг роли в начало сообщения
             sent_message = await channel.send(message, embed=embed, view=view)
             global message_id
             message_id = sent_message.id  # Сохраняем ID отправленного сообщения
@@ -139,7 +139,7 @@ class CircuitsView(discord.ui.View):
         await interaction.response.defer()
         channel = bot.get_channel(config['channel_id'])
         embed = discord.Embed(description="# 💾 Схемы \nРаботники - ", color=0x50FFBC)
-        message = f'<@&879192631060606998>\n'  # Добавляем пинг роли в начало сообщения
+        message = f'<@&1176169070400376862>\n'  # Добавляем пинг роли в начало сообщения
         await channel.send(message, embed=embed, view=CircuitsView2())
 
 
@@ -148,7 +148,7 @@ class CircuitsView2(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.user_count = 0
-        self.max_users = 2
+        self.max_users = 5
 
     @discord.ui.button(label="Записаться", style=discord.ButtonStyle.secondary)
     async def Circuitsoption(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -225,7 +225,7 @@ class StartCircuitsView(discord.ui.View):
         channel = bot.get_channel(config['channel_id'])
         workers_mention = " ".join(existing_users)
         new_message_content = f"Выполняют: {workers_mention}"
-        end_time = (datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=4)).strftime('%m-%d %H:%M')
+        end_time = (datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=4)).strftime('%d-%m %H:%M')
         new_embed = discord.Embed(description=f"# 💾 Схемы \n## Контракт запущен\n## Выполнить до: {end_time} ", color=0x50FFBC)
         new_view = EndCircuitsView(message_id=self.message_id)
         await channel.send(new_message_content, embed=new_embed, view=new_view)
@@ -669,7 +669,7 @@ class ContractControlView(discord.ui.View):
         if user_ping in registered_users:
             channel = bot.get_channel(config['channel_id'])
             embed = discord.Embed(title="SOS", description="# 🥩 МЯСО \nТребуется помощь!", color=0xFF0000)
-            message = f'<@&879192631060606998>\n'  # Добавляем пинг роли в начало сообщения
+            message = f'<@&1176169070400376862>\n'  # Добавляем пинг роли в начало сообщения
             sent_message = await channel.send(message, embed=embed, view=SOSView())
 
 class View2(discord.ui.View):
@@ -774,7 +774,7 @@ class View2(discord.ui.View):
         if user_ping in registered_users:
             channel = bot.get_channel(config['channel_id'])
             embed = discord.Embed(title="SOS", description="# ♻️ МУСОР \nТребуется помощь!", color=0xFF0000)
-            message = f'<@&879192631060606998>\n'  # Добавляем пинг роли в начало сообщения
+            message = f'<@&1176169070400376862>\n'  # Добавляем пинг роли в начало сообщения
             sent_message = await channel.send(message, embed=embed, view=SOSViewT())
 
 class BNBView(discord.ui.View):
@@ -786,7 +786,7 @@ class BNBView(discord.ui.View):
     async def start_contract(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         channel = bot.get_channel(config['channel_id'])
-        message = f'<@&879192631060606998>\n'  # Добавляем пинг роли в начало сообщения
+        message = f'<@&1176169070400376862>\n'  # Добавляем пинг роли в начало сообщения
         embed = discord.Embed(description="# ⚒️ ЛНС \nВыполнено: 0/20", color=0x50FFBC)
         view = CompleteBNBView()
 
@@ -992,15 +992,22 @@ async def статистика(ctx, member: discord.Member = None):
     if member:
         stats = get_stats(member.mention)
         if stats:
+            # Персонализированное сообщение
+            personalized_message = f"Привет, {member.display_name}! Вот твоя статистика за этот месяц:"
             embed.add_field(name="Пользователь", value=member.mention, inline=False)
             embed.add_field(name="Контракты",
                             value=f"🥩 - {stats[1]} | ♻️️ - {stats[2]} | 💾 - {stats[3]} | ⚒️ - {stats[4]}",
                             inline=False)
         else:
+            personalized_message = f"Привет, {member.display_name}. К сожалению, для тебя нет данных за этот месяц."
             embed.add_field(name="Ошибка", value=f"Нет статистики для {member.mention} за текущий месяц.", inline=False)
+
+        await ctx.send(content=personalized_message, embed=embed)
+
     else:
         stats = get_stats()
         if stats:
+            embed.description = "Общая статистика за текущий месяц:"
             for stat in stats:
                 embed.add_field(name="\u200b",  # Используем невидимый символ, чтобы убрать заголовок поля
                                 value=f"{stat[0]}: 🥩 - {stat[1]} | ♻️️ - {stat[2]} | 💾 - {stat[3]} | ⚒️ - {stat[4]}",
@@ -1008,10 +1015,10 @@ async def статистика(ctx, member: discord.Member = None):
         else:
             embed.add_field(name="Ошибка", value="Нет статистики для пользователей за текущий месяц.", inline=False)
 
-    await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
 
-@bot.command(name="сконтракты", case_insensitive=True)
+@bot.command(name="контракты", case_insensitive=True)
 async def сконтракты(ctx):
     conn = sqlite3.connect(r'/escdb/escdb.db')
     cursor = conn.cursor()
@@ -1098,8 +1105,8 @@ class GatheringView(discord.ui.View):
 
 
 # Использование кастомного View в команде
-@bot.command(name="сборвзп")
-async def сборвзп(ctx, count : int):
+@bot.command(name="взп")
+async def сборвзп(ctx, count: int):
     if count <= 0:
         await ctx.send("Количество участников должно быть больше 0.")
         return
@@ -1114,7 +1121,7 @@ async def сборвзп(ctx, count : int):
     view = GatheringView(count, embed)
 
     # Отправляем embed с View
-    await ctx.send(content=f"<@&879192631060606998>", embed=embed, view=view)
+    await ctx.send(content=f"<@&1176169070400376862>", embed=embed, view=view)
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
