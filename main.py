@@ -1012,6 +1012,9 @@ async def статистика(ctx, member: discord.Member = None):
 
         await ctx.send(embed=embed)
 
+    # Удаление командного сообщения
+    await ctx.message.delete()
+
 
 @bot.command(name="контракты", case_insensitive=True)
 async def контракты(ctx):
@@ -1079,6 +1082,9 @@ async def контракты(ctx):
 
     await ctx.send(embed=embed)
 
+    # Удаление командного сообщения
+    await ctx.message.delete()
+
 
 
 class GatheringView(discord.ui.View):
@@ -1126,6 +1132,9 @@ async def сборвзп(ctx, count: int):
 
     # Отправляем embed с View
     await ctx.send(content=f"<@&1176169070400376862>", embed=embed, view=view)
+
+    # Удаление командного сообщения
+    await ctx.message.delete()
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 
