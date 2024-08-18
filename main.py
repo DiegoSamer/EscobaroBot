@@ -11,7 +11,7 @@ load_dotenv()
 
 config = {
     'prefix': '!',
-    'channel_id': 879019933957255208
+    'channel_id': 1170238481725915216
 }
 
 intents = discord.Intents.default()
@@ -36,7 +36,7 @@ async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 14:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 8 and moscow_time.minute == 0:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
@@ -990,17 +990,14 @@ async def статистика(ctx, member: discord.Member = None):
     if member:
         stats = get_stats(member.mention)
         if stats:
-            # Персонализированное сообщение
-            personalized_message = f"Привет, {member.display_name}! Вот твоя статистика за этот месяц:"
             embed.add_field(name="Пользователь", value=member.mention, inline=False)
             embed.add_field(name="Контракты",
                             value=f"🥩 - {stats[1]} | ♻️️ - {stats[2]} | 💾 - {stats[3]} | ⚒️ - {stats[4]}",
                             inline=False)
         else:
-            personalized_message = f"Привет, {member.display_name}. К сожалению, для тебя нет данных за этот месяц."
             embed.add_field(name="Ошибка", value=f"Нет статистики для {member.mention} за текущий месяц.", inline=False)
 
-        await ctx.send(content=personalized_message, embed=embed)
+        await ctx.send(embed=embed)
 
     else:
         stats = get_stats()
@@ -1017,7 +1014,7 @@ async def статистика(ctx, member: discord.Member = None):
 
 
 @bot.command(name="контракты", case_insensitive=True)
-async def сконтракты(ctx):
+async def контракты(ctx):
     conn = sqlite3.connect(r'/escdb/escdb.db')
     cursor = conn.cursor()
 
@@ -1055,6 +1052,8 @@ async def сконтракты(ctx):
     display_month = month_names.get(current_month[-2:], current_month)
     embed = discord.Embed(description=f"# Статистика контрактов за {display_month}", color=0x50FFBC)
 
+    total_profit = 0  # Переменная для накопления общей прибыли
+
     if contracts:
         for contract in contracts:
             name = contract[0]
@@ -1064,15 +1063,22 @@ async def сконтракты(ctx):
             display_name = contract_names.get(name, {'display_name': name, 'profit_per_unit': 0})['display_name']
             profit_per_unit = contract_names.get(name, {'display_name': name, 'profit_per_unit': 0})['profit_per_unit']
 
-            # Рассчитываем общую прибыль
-            total_profit = count * profit_per_unit
+            # Рассчитываем общую прибыль для текущего контракта
+            contract_profit = count * profit_per_unit
+
+            # Добавляем прибыль текущего контракта к общей прибыли
+            total_profit += contract_profit
 
             # Добавляем информацию о контракте в embed
-            embed.add_field(name=display_name, value=f"Количество: {count} | Прибыль: {total_profit}$", inline=False)
+            embed.add_field(name=display_name, value=f"Количество: {count} | Прибыль: {contract_profit}$", inline=False)
+
+        # Добавляем общую прибыль в конец embed
+        embed.add_field(name="Общая прибыль", value=f"{total_profit}$", inline=False)
     else:
         embed.add_field(name="Ошибка", value="Нет данных по контрактам за текущий месяц.", inline=False)
 
     await ctx.send(embed=embed)
+
 
 
 class GatheringView(discord.ui.View):
