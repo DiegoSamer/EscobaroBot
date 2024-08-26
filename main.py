@@ -11,7 +11,7 @@ load_dotenv()
 
 config = {
     'prefix': '!',
-    'channel_id': 879019933957255208
+    'channel_id': 1170238481725915216
 }
 
 intents = discord.Intents.default()
@@ -35,7 +35,7 @@ async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 12 and moscow_time.minute == 16:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 12 and moscow_time.minute == 20:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
