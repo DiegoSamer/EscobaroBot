@@ -10,7 +10,7 @@ import sqlite3
 load_dotenv()
 
 config = {
-    'prefix': '/',
+    'prefix': '!',
     'channel_id': 1170238481725915216
 }
 
