@@ -24,8 +24,6 @@ message_id = None
 start_message_idm = None
 start_message_idt = None
 completed_count = 0
-HOUR = int(os.getenv('HOUR'))
-MINUTE = int(os.getenv('MINUTE'))
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
@@ -37,7 +35,7 @@ async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == HOUR and moscow_time.minute == MINUTE:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 12 and moscow_time.minute == 7:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
