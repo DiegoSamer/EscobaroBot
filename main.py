@@ -11,7 +11,7 @@ load_dotenv()
 
 config = {
     'prefix': '!',
-    'channel_id': 1170238481725915216
+    'channel_id': 879019933957255208
 }
 
 intents = discord.Intents.default()
@@ -35,7 +35,7 @@ async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 12 and moscow_time.minute == 7:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 12 and moscow_time.minute == 16:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
@@ -50,7 +50,7 @@ async def send_message():
 
 async def create_initial_embed():
     # Подключаемся к базе данных и получаем время отката для каждого контракта
-    conn = sqlite3.connect('escdb.db')
+    conn = sqlite3.connect(r'/escdb/escdb.db')
     cursor = conn.cursor()
 
     cursor.execute('SELECT Rollback FROM Meet WHERE ROWID = (SELECT MAX(ROWID) FROM Meet)')
@@ -155,7 +155,7 @@ class CircuitsView2(discord.ui.View):
         user_mention = interaction.user.mention
 
         # Подключаемся к базе данных и добавляем запись
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         # Проверяем, записан ли уже пользователь
@@ -197,7 +197,7 @@ class StartCircuitsView(discord.ui.View):
     @discord.ui.button(label="Запустить", style=discord.ButtonStyle.secondary)
     async def start_circuits(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_mention = interaction.user.mention
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         # Проверяем, записан ли уже пользователь
@@ -237,7 +237,7 @@ class EndCircuitsView(discord.ui.View):
     @discord.ui.button(label="Завершил", style=discord.ButtonStyle.secondary)
     async def end_circuits(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_mention = interaction.user.mention
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         # Проверяем, записан ли уже пользователь
@@ -319,7 +319,7 @@ class MeatView(discord.ui.View):
         user_ping = interaction.user.mention
 
         # Подключаемся к базе данных и добавляем запись
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         # Проверяем, записан ли уже пользователь
@@ -359,7 +359,7 @@ class MeatView(discord.ui.View):
         user_ping = interaction.user.mention
 
         # Подключаемся к базе данных и проверяем, записан ли пользователь
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
         cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
         registered_users = {row[0] for row in cursor.fetchall()}
@@ -403,7 +403,7 @@ class MeatView(discord.ui.View):
                 await message.edit(embed=updated_embed)
 
             # Обновляем время начала и окончания в базе данных
-            conn = sqlite3.connect('escdb.db')
+            conn = sqlite3.connect(r'/escdb/escdb.db')
             cursor = conn.cursor()
             cursor.execute('UPDATE Meet SET Start = ?, End = ? WHERE ContractID = ?',
                            (current_time, end_time, message_id))
@@ -428,7 +428,7 @@ class TrashView(discord.ui.View):
         user_ping = interaction.user.mention
 
         # Подключаемся к базе данных и добавляем запись
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         # Проверяем, записан ли уже пользователь
@@ -468,7 +468,7 @@ class TrashView(discord.ui.View):
         user_ping = interaction.user.mention
 
         # Подключаемся к базе данных и проверяем, записан ли пользователь
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
         cursor.execute('SELECT Worker FROM Trash WHERE ContractID = ?', (message_id,))
         registered_users = {row[0] for row in cursor.fetchall()}
@@ -506,7 +506,7 @@ class TrashView(discord.ui.View):
                 await message.edit(embed=updated_embed)
 
             # Обновляем время начала и окончания в базе данных
-            conn = sqlite3.connect('escdb.db')
+            conn = sqlite3.connect(r'/escdb/escdb.db')
             cursor = conn.cursor()
             cursor.execute('UPDATE Trash SET Start = ?, End = ? WHERE ContractID = ?',
                            (current_time, end_time, message_id))
@@ -531,7 +531,7 @@ class SOSView(discord.ui.View):
         user_ping = interaction.user.mention
 
         # Подключаемся к базе данных и добавляем запись
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         cursor.execute("INSERT INTO Meet (Worker, ContractID) VALUES (?, ?)", (user_ping, message_id))
@@ -553,7 +553,7 @@ class SOSViewT(discord.ui.View):
         user_ping = interaction.user.mention
 
         # Подключаемся к базе данных и добавляем запись
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         cursor.execute("INSERT INTO Trash (Worker, ContractID) VALUES (?, ?)", (user_ping, message_id))
@@ -575,7 +575,7 @@ class ContractControlView(discord.ui.View):
         user_ping = interaction.user.mention
 
         # Подключаемся к базе данных и проверяем, записан ли пользователь
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
         cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
         registered_users = {row[0] for row in cursor.fetchall()}
@@ -656,7 +656,7 @@ class ContractControlView(discord.ui.View):
     async def help_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         user_ping = interaction.user.mention
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
         cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
         registered_users = {row[0] for row in cursor.fetchall()}
@@ -677,7 +677,7 @@ class View2(discord.ui.View):
         await interaction.response.defer()
         user_ping = interaction.user.mention
 
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
         cursor.execute('SELECT Worker FROM Trash WHERE ContractID = ?', (message_id,))
         registered_users = {row[0] for row in cursor.fetchall()}
@@ -762,7 +762,7 @@ class View2(discord.ui.View):
     async def help_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         user_ping = interaction.user.mention
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
         cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
         registered_users = {row[0] for row in cursor.fetchall()}
@@ -793,7 +793,7 @@ class BNBView(discord.ui.View):
         ed_message_id = sent_message.id
 
         # Подключаемся к базе данных и добавляем запись
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         current_time = datetime.now(pytz.timezone('Europe/Moscow')).strftime('%d-%m-%Y %H:%M')
@@ -820,7 +820,7 @@ class BNBView(discord.ui.View):
             updated_embed = message.embeds[0]
 
             # Подключаемся к базе данных и обновляем запись
-            conn = sqlite3.connect('escdb.db')
+            conn = sqlite3.connect(r'/escdb/escdb.db')
             cursor = conn.cursor()
 
             cursor.execute("SELECT Worker, End FROM BNB WHERE ContractID = ? AND Worker IS NOT NULL", (ed_message_id,))
@@ -868,7 +868,7 @@ class CompleteBNBView(discord.ui.View):
         updated_embed = message.embeds[0]
 
         # Подключаемся к базе данных и обновляем запись
-        conn = sqlite3.connect('escdb.db')
+        conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
         current_time = datetime.now(pytz.timezone('Europe/Moscow')).strftime('%d-%m-%Y %H:%M')
@@ -965,7 +965,7 @@ class CompleteBNBView(discord.ui.View):
         await message.edit(embed=updated_embed)
 
 def get_stats(user=None):
-    conn = sqlite3.connect('escdb.db')
+    conn = sqlite3.connect(r'/escdb/escdb.db')
     cursor = conn.cursor()
 
     current_month = datetime.now().strftime('%Y-%m')  # Получаем текущий месяц в формате ГГГГ-ММ
@@ -1017,7 +1017,7 @@ async def статистика(ctx, member: discord.Member = None):
 
 @bot.command(name="контракты", case_insensitive=True)
 async def контракты(ctx):
-    conn = sqlite3.connect('escdb.db')
+    conn = sqlite3.connect(r'/escdb/escdb.db')
     cursor = conn.cursor()
 
     # Получаем текущий месяц в формате ГГГГ-ММ
