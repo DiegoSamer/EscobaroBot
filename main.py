@@ -1051,7 +1051,7 @@ async def контракты(ctx):
         '12': 'Декабрь'
     }
 
-    display_month = month_names.get(current_month[-2:], current_month)
+    display_month = month_names.get(current_month[:2], current_month)
     embed = discord.Embed(description=f"# Статистика контрактов за {display_month}", color=0x50FFBC)
 
     total_profit = 0  # Переменная для накопления общей прибыли
