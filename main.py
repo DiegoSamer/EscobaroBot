@@ -35,7 +35,7 @@ async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 12 and moscow_time.minute == 20:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 8 and moscow_time.minute == 0:  # Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
@@ -278,7 +278,7 @@ class EndCircuitsView(discord.ui.View):
             await original_message.edit(embed=original_embed)
 
             # Increment the Circuits count in the Stat table
-            current_month = datetime.now().strftime('%Y-%m')
+            current_month = datetime.now().strftime('%m-%Y')
             for user in existing_users:
                 cursor.execute('SELECT Сircuits FROM Stat WHERE Worker = ? AND Month = ?', (user, current_month))
                 circuits_row = cursor.fetchone()
@@ -619,7 +619,7 @@ class ContractControlView(discord.ui.View):
             if start_message_idm:
                 start_message = await channel.fetch_message(start_message_idm)
                 await start_message.delete()
-            current_month = datetime.now().strftime('%Y-%m')
+            current_month = datetime.now().strftime('%m-%Y')
             # Обновление таблицы Contracts
             cursor.execute('SELECT Count FROM Сontracts WHERE Name = "Meet" AND Month = ?', (current_month,))
             count_row = cursor.fetchone()
@@ -723,7 +723,7 @@ class View2(discord.ui.View):
                 start_message = await channel.fetch_message(start_message_idt)
                 await start_message.delete()
 
-            current_month = datetime.now().strftime('%Y-%m')
+            current_month = datetime.now().strftime('%m-%Y')
             # Обновление таблицы Contracts
             cursor.execute('SELECT Count FROM Сontracts WHERE Name = "Trash" AND Month = ?', (current_month,))
             count_row = cursor.fetchone()
@@ -873,7 +873,7 @@ class CompleteBNBView(discord.ui.View):
 
         current_time = datetime.now(pytz.timezone('Europe/Moscow')).strftime('%d-%m-%Y %H:%M')
         end_time = (datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=24)).strftime('%d-%m-%Y %H:%M')
-        current_month = datetime.now().strftime('%Y-%m')
+        current_month = datetime.now().strftime('%m-%Y')
 
         # Проверяем, существует ли уже запись для данного пользователя и контракта
         cursor.execute("SELECT 1 FROM BNB WHERE ContractID = ? AND Worker = ?",
@@ -968,7 +968,7 @@ def get_stats(user=None):
     conn = sqlite3.connect(r'/escdb/escdb.db')
     cursor = conn.cursor()
 
-    current_month = datetime.now().strftime('%Y-%m')  # Получаем текущий месяц в формате ГГГГ-ММ
+    current_month = datetime.now().strftime('%m-%Y')  # Получаем текущий месяц в формате ГГГГ-ММ
 
     if user:
         cursor.execute('SELECT * FROM Stat WHERE Worker = ? AND Month = ?', (user, current_month))
@@ -1021,7 +1021,7 @@ async def контракты(ctx):
     cursor = conn.cursor()
 
     # Получаем текущий месяц в формате ГГГГ-ММ
-    current_month = datetime.now().strftime('%Y-%m')
+    current_month = datetime.now().strftime('%m-%Y')
 
     # Извлекаем данные из таблицы Contracts для текущего месяца
     cursor.execute('SELECT Name, Count FROM Сontracts WHERE Month = ?', (current_month,))
