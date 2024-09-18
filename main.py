@@ -35,7 +35,7 @@ async def send_message():
     global message_id  # Используем глобальную переменную
     moscow_tz = pytz.timezone('Europe/Moscow')
     moscow_time = datetime.now(moscow_tz)
-    if moscow_time.hour == 8 and moscow_time.minute == 0:  # Отправляем сообщение в 11:57 МСК
+    if moscow_time.hour == 8 and moscow_time.minute == 0:# Отправляем сообщение в 11:57 МСК
         channel = bot.get_channel(config['channel_id'])
         if channel:
             embed = await create_initial_embed()
@@ -130,23 +130,27 @@ class MyView(discord.ui.View):
 
 class CircuitsView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None)  # Set timeout to None
+        super().__init__(timeout=None)
 
     @discord.ui.button(label="Запустить", style=discord.ButtonStyle.secondary)
     async def Circuitsoption(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         channel = bot.get_channel(config['channel_id'])
         embed = discord.Embed(description="# 💾 Схемы \nРаботники - ", color=0x50FFBC)
-        message = f'<@&1176169070400376862>\n'  # Добавляем пинг роли в начало сообщения
-        await channel.send(message, embed=embed, view=CircuitsView2())
+        message = f'<@&1176169070400376862>\n'  # Пинг роли
+        msg = await channel.send(message, embed=embed, view=CircuitsView2(msg_id=None))
 
+        # Устанавливаем message_id для использования в CircuitsView2
+        view = CircuitsView2(msg_id=msg.id)
+        await msg.edit(view=view)
 
 
 class CircuitsView2(discord.ui.View):
-    def __init__(self):
+    def __init__(self, msg_id):
         super().__init__(timeout=None)
         self.user_count = 0
-        self.max_users = 5
+        self.max_users = 2
+        self.message_id = msg_id  # Используем ID сообщения для сбора участников
 
     @discord.ui.button(label="Записаться", style=discord.ButtonStyle.secondary)
     async def Circuitsoption(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -159,44 +163,50 @@ class CircuitsView2(discord.ui.View):
         cursor = conn.cursor()
 
         # Проверяем, записан ли уже пользователь
-        cursor.execute('SELECT Worker FROM Circuits WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Circuits WHERE ContractID = ?', (self.message_id,))
         existing_users = {row[0] for row in cursor.fetchall()}
 
         if user_mention in existing_users:
             await interaction.followup.send("Вы уже записаны на контракт.", ephemeral=True)
+            conn.close()
             return
 
         if self.user_count < self.max_users:
-            # Add the new user mention to the database
-            cursor.execute("INSERT INTO Circuits (Worker, ContractID) VALUES (?, ?)", (user_mention, message_id))
+            # Добавляем нового пользователя в базу данных
+            cursor.execute("INSERT INTO Circuits (Worker, ContractID) VALUES (?, ?)", (user_mention, self.message_id))
             conn.commit()
 
-            # Find the current "Работники - " line and append the new user mention
+            # Обновляем сообщение, добавив пользователя в описание
             new_description = original_message.embeds[0].description + f" {user_mention}"
             new_embed = discord.Embed(title=original_message.embeds[0].title, description=new_description, color=0x50FFBC)
 
-            # Increment the user count
+            # Увеличиваем количество участников
             self.user_count += 1
 
-            # Edit the message with the new embed
+            # Обновляем сообщение
             await original_message.edit(embed=new_embed)
 
-            # Check if the max user limit is reached
+            # Если достигнут лимит пользователей
             if self.user_count >= self.max_users:
-                # Create a new view with the "Запустить" button
-                new_view = StartCircuitsView(message_id=message_id)
+                # Создаем новую кнопку "Запустить"
+                new_view = StartCircuitsView(message_id=self.message_id)
                 await original_message.edit(view=new_view)
         else:
             await interaction.followup.send("Все места уже заняты.", ephemeral=True)
 
+        conn.close()
+
+
 class StartCircuitsView(discord.ui.View):
     def __init__(self, message_id):
-        super().__init__(timeout=None)  # Set timeout to None
+        super().__init__(timeout=None)
         self.message_id = message_id
+        self.starter_user_id = None  # Пользователь, который нажал "Запустить"
 
     @discord.ui.button(label="Запустить", style=discord.ButtonStyle.secondary)
     async def start_circuits(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_mention = interaction.user.mention
+        self.starter_user_id = interaction.user.id  # Сохраняем ID пользователя, который нажал "Запустить"
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
@@ -204,39 +214,42 @@ class StartCircuitsView(discord.ui.View):
         cursor.execute('SELECT Worker FROM Circuits WHERE ContractID = ?', (self.message_id,))
         existing_users = {row[0] for row in cursor.fetchall()}
 
+        if user_mention not in existing_users:
+            await interaction.response.send_message("Вы не записаны на контракт и не можете его запустить.", ephemeral=True)
+            conn.close()
+            return
+
         current_time = datetime.now(pytz.timezone('Europe/Moscow')).strftime('%d-%m-%Y %H:%M')
         end_time = (datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=4)).strftime('%d-%m-%Y %H:%M')
 
-        if user_mention not in existing_users:
-            await interaction.response.send_message("Вы не записаны на контракт и не можете его запустить.", ephemeral=True)
-            return
-
-        # Update the database with the formatted start and end times
+        # Обновляем базу данных с началом и концом контракта
         cursor.execute('UPDATE Circuits SET Start = ?, End = ? WHERE ContractID = ?', (current_time, end_time, self.message_id))
         conn.commit()
         conn.close()
 
-        # Delete the original message
+        # Удаляем сообщение с кнопками
         await interaction.message.delete()
 
-        # Send the new message
+        # Отправляем новое сообщение с упоминанием пользователей
         channel = bot.get_channel(config['channel_id'])
         workers_mention = " ".join(existing_users)
         new_message_content = f"Выполняют: {workers_mention}"
-        end_time = (datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=4)).strftime('%d-%m-%Y %H:%M')
-        new_embed = discord.Embed(description=f"# 💾 Схемы \n## Контракт запущен\n## Выполнить до: {end_time} ", color=0x50FFBC)
-        new_view = EndCircuitsView(message_id=self.message_id)
+        new_embed = discord.Embed(description=f"# 💾 Схемы \n## Контракт запущен\n## Выполнить до: {end_time}", color=0x50FFBC)
+        new_view = EndCircuitsView(message_id=self.message_id, starter_user_id=self.starter_user_id)
         await channel.send(new_message_content, embed=new_embed, view=new_view)
 
+
 class EndCircuitsView(discord.ui.View):
-    def __init__(self, message_id: int):
+    def __init__(self, message_id: int, starter_user_id: int):
         super().__init__(timeout=None)
         self.message_id = message_id
+        self.starter_user_id = starter_user_id  # ID того, кто запустил контракт
         self.completed_users = set()
 
     @discord.ui.button(label="Завершил", style=discord.ButtonStyle.secondary)
     async def end_circuits(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_mention = interaction.user.mention
+        user_id = interaction.user.id
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
@@ -244,70 +257,63 @@ class EndCircuitsView(discord.ui.View):
         cursor.execute('SELECT Worker FROM Circuits WHERE ContractID = ?', (self.message_id,))
         existing_users = {row[0] for row in cursor.fetchall()}
 
-        if user_mention not in existing_users:
-            await interaction.response.send_message("Вы не записаны на контракт и не можете его завершить.", ephemeral=True)
+        if user_id != self.starter_user_id:
+            await interaction.response.send_message("Только пользователь, запустивший контракт, может его завершить.", ephemeral=True)
+            conn.close()
             return
 
         current_time = datetime.now(pytz.timezone('Europe/Moscow')).strftime('%d-%m-%Y %H:%M')
 
-        # Update the end time for the user
+        # Обновляем время завершения контракта
         cursor.execute('UPDATE Circuits SET End = ? WHERE ContractID = ? AND Worker = ?', (current_time, self.message_id, user_mention))
         conn.commit()
 
         self.completed_users.add(user_mention)
         channel = bot.get_channel(config['channel_id'])
 
-        if len(self.completed_users) == len(existing_users):
-            # Set the rollback time when the last user completes the contract
-            rollback_time = (datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=20)).strftime('%d-%m-%Y %H:%M')
-            cursor.execute('UPDATE Circuits SET Rollback = ? WHERE ContractID = ?', (rollback_time, self.message_id))
-            conn.commit()
+        # Откат контракта
+        rollback_time = (datetime.now(pytz.timezone('Europe/Moscow')) + timedelta(hours=20)).strftime('%d-%m-%Y %H:%M')
+        cursor.execute('UPDATE Circuits SET Rollback = ? WHERE ContractID = ?', (rollback_time, self.message_id))
+        conn.commit()
 
-            original_message = await channel.fetch_message(self.message_id)  # Получаем сообщение по ID
-            original_embed = original_message.embeds[0]
-            original_description_lines = original_embed.description.split('\n')
+        # Обновляем сообщение с контрактом
+        original_message = await channel.fetch_message(message_id)
+        original_embed = original_message.embeds[0]
+        original_description_lines = original_embed.description.split('\n')
 
-            # Обновляем строку с "## 💾 Схемы -"
-            for i, line in enumerate(original_description_lines):
-                if line.startswith("## 💾 Схемы -"):
-                    original_description_lines[i] = f"{line.split(' - ')[0]} - Контракт откатится - {rollback_time}"
-                    break
+        for i, line in enumerate(original_description_lines):
+            if line.startswith("## 💾 Схемы -"):
+                original_description_lines[i] = f"{line.split(' - ')[0]} - Контракт откатится - {rollback_time}"
+                break
 
-            # Собираем обновленное описание
-            original_embed.description = '\n'.join(original_description_lines)
-            await original_message.edit(embed=original_embed)
+        original_embed.description = '\n'.join(original_description_lines)
+        await original_message.edit(embed=original_embed)
 
-            # Increment the Circuits count in the Stat table
-            current_month = datetime.now().strftime('%m-%Y')
-            for user in existing_users:
-                cursor.execute('SELECT Сircuits FROM Stat WHERE Worker = ? AND Month = ?', (user, current_month))
-                circuits_row = cursor.fetchone()
-
-                current_value = (circuits_row[0] if circuits_row and circuits_row[0] is not None else 0) + 1
-
-                if circuits_row:
-                    cursor.execute('UPDATE Stat SET Сircuits = ? WHERE Worker = ? AND Month = ?', (current_value, user, current_month))
-                else:
-                    cursor.execute('INSERT INTO Stat (Worker, Month, Сircuits) VALUES (?, ?, ?)', (user, current_month, 1))
-                conn.commit()
-
-            # Update or insert into Contracts table
-            cursor.execute('SELECT Count FROM Сontracts WHERE Name = "Circuits" AND Month = ?', (current_month,))
-            count_row = cursor.fetchone()
-            if count_row:
-                count = count_row[0] + 1
-                cursor.execute('UPDATE Сontracts SET Count = ? WHERE Name = "Circuits" AND Month = ?', (count, current_month))
+        # Обновляем статистику и контракты в базе данных
+        current_month = datetime.now().strftime('%m-%Y')
+        for user in existing_users:
+            cursor.execute('SELECT Сircuits FROM Stat WHERE Worker = ? AND Month = ?', (user, current_month))
+            circuits_row = cursor.fetchone()
+            current_value = (circuits_row[0] if circuits_row else 0) + 1
+            if circuits_row:
+                cursor.execute('UPDATE Stat SET Сircuits = ? WHERE Worker = ? AND Month = ?', (current_value, user, current_month))
             else:
-                cursor.execute('INSERT INTO Сontracts (Name, Month, Count) VALUES ("Circuits", ?, 1)', (current_month,))
+                cursor.execute('INSERT INTO Stat (Worker, Month, Сircuits) VALUES (?, ?, ?)', (user, current_month, 1))
             conn.commit()
 
-            await interaction.message.delete()
-            await interaction.response.send_message("Контракт завершён!", ephemeral=True)
+        cursor.execute('SELECT Count FROM Сontracts WHERE Name = "Circuits" AND Month = ?', (current_month,))
+        count_row = cursor.fetchone()
+        if count_row:
+            count = count_row[0] + 1
+            cursor.execute('UPDATE Сontracts SET Count = ? WHERE Name = "Circuits" AND Month = ?', (count, current_month))
         else:
-            await interaction.response.send_message("Вы завершили контракт. Ожидание остальных участников...", ephemeral=True)
+            cursor.execute('INSERT INTO Сontracts (Name, Month, Count) VALUES ("Circuits", ?, 1)', (current_month,))
+        conn.commit()
+
+        await interaction.message.delete()
+        await interaction.response.send_message("Контракт завершён!", ephemeral=True)
 
         conn.close()
-
 
 class MeatView(discord.ui.View):
     def __init__(self):
@@ -322,13 +328,16 @@ class MeatView(discord.ui.View):
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
+        global meatid
+        meatid = message_id
+
         # Проверяем, записан ли уже пользователь
-        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (meatid,))
         existing_users = {row[0] for row in cursor.fetchall()}
 
         if len(existing_users) < 2:
             if user_ping not in existing_users:
-                cursor.execute("INSERT INTO Meet (Worker, ContractID) VALUES (?, ?)", (user_ping, message_id))
+                cursor.execute("INSERT INTO Meet (Worker, ContractID) VALUES (?, ?)", (user_ping, meatid))
                 conn.commit()
 
                 # Обновляем изначальное сообщение
@@ -361,7 +370,7 @@ class MeatView(discord.ui.View):
         # Подключаемся к базе данных и проверяем, записан ли пользователь
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (meatid,))
         registered_users = {row[0] for row in cursor.fetchall()}
         conn.close()
 
@@ -406,7 +415,7 @@ class MeatView(discord.ui.View):
             conn = sqlite3.connect(r'/escdb/escdb.db')
             cursor = conn.cursor()
             cursor.execute('UPDATE Meet SET Start = ?, End = ? WHERE ContractID = ?',
-                           (current_time, end_time, message_id))
+                           (current_time, end_time, meatid))
             conn.commit()
             conn.close()
 
@@ -431,13 +440,16 @@ class TrashView(discord.ui.View):
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
+        global trashid
+        trashid = message_id
+
         # Проверяем, записан ли уже пользователь
-        cursor.execute('SELECT Worker FROM Trash WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Trash WHERE ContractID = ?', (trashid,))
         existing_users = {row[0] for row in cursor.fetchall()}
 
         if len(existing_users) < 2:
             if user_ping not in existing_users:
-                cursor.execute("INSERT INTO Trash (Worker, ContractID) VALUES (?, ?)", (user_ping, message_id))
+                cursor.execute("INSERT INTO Trash (Worker, ContractID) VALUES (?, ?)", (user_ping, trashid))
                 conn.commit()
 
                 # Обновляем изначальное сообщение
@@ -509,7 +521,7 @@ class TrashView(discord.ui.View):
             conn = sqlite3.connect(r'/escdb/escdb.db')
             cursor = conn.cursor()
             cursor.execute('UPDATE Trash SET Start = ?, End = ? WHERE ContractID = ?',
-                           (current_time, end_time, message_id))
+                           (current_time, end_time, trashid))
             conn.commit()
             conn.close()
 
@@ -534,7 +546,7 @@ class SOSView(discord.ui.View):
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
-        cursor.execute("INSERT INTO Meet (Worker, ContractID) VALUES (?, ?)", (user_ping, message_id))
+        cursor.execute("INSERT INTO Meet (Worker, ContractID) VALUES (?, ?)", (user_ping, meatid))
         conn.commit()
 
         # Обновляем сообщение "SOS"
@@ -556,7 +568,7 @@ class SOSViewT(discord.ui.View):
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
 
-        cursor.execute("INSERT INTO Trash (Worker, ContractID) VALUES (?, ?)", (user_ping, message_id))
+        cursor.execute("INSERT INTO Trash (Worker, ContractID) VALUES (?, ?)", (user_ping, trashid))
         conn.commit()
 
         # Обновляем сообщение "SOS"
@@ -577,7 +589,7 @@ class ContractControlView(discord.ui.View):
         # Подключаемся к базе данных и проверяем, записан ли пользователь
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (meatid,))
         registered_users = {row[0] for row in cursor.fetchall()}
         # Проверяем, записан ли пользователь
         if user_ping in registered_users:
@@ -585,13 +597,13 @@ class ContractControlView(discord.ui.View):
 
             # Обновляем время завершения в базе данных
             cursor.execute('UPDATE Meet SET End = ? WHERE ContractID = ?',
-                           (end_time.strftime('%d-%m-%Y %H:%M'), message_id))
+                           (end_time.strftime('%d-%m-%Y %H:%M'), meatid))
             conn.commit()
 
             # Обновляем время отката в базе данных
             rollback_time = end_time + timedelta(hours=26)
             cursor.execute('UPDATE Meet SET Rollback = ? WHERE ContractID = ?',
-                           (rollback_time.strftime('%d-%m-%Y %H:%M'), message_id))
+                           (rollback_time.strftime('%d-%m-%Y %H:%M'), meatid))
 
             # Обновляем изначальное сообщение с новым временем и участниками
             channel = bot.get_channel(config['channel_id'])
@@ -658,7 +670,7 @@ class ContractControlView(discord.ui.View):
         user_ping = interaction.user.mention
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (meatid,))
         registered_users = {row[0] for row in cursor.fetchall()}
 
         # Проверяем, записан ли пользователь
@@ -679,7 +691,7 @@ class View2(discord.ui.View):
 
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT Worker FROM Trash WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Trash WHERE ContractID = ?', (trashid,))
         registered_users = {row[0] for row in cursor.fetchall()}
 
             # Проверяем, записан ли пользователь
@@ -688,13 +700,13 @@ class View2(discord.ui.View):
 
             # Обновляем время завершения в базе данных
             cursor.execute('UPDATE Trash SET End = ? WHERE ContractID = ?',
-                            (end_time.strftime('%d-%m-%Y %H:%M'), message_id))
+                            (end_time.strftime('%d-%m-%Y %H:%M'), trashid))
             conn.commit()
 
             # Обновляем время отката в базе данных
             rollback_time = end_time + timedelta(hours=26)
             cursor.execute('UPDATE Trash SET Rollback = ? WHERE ContractID = ?',
-                            (rollback_time.strftime('%d-%m-%Y %H:%M'), message_id))
+                            (rollback_time.strftime('%d-%m-%Y %H:%M'), trashid))
 
             # Обновляем изначальное сообщение с новым временем и участниками
             channel = bot.get_channel(config['channel_id'])
@@ -764,7 +776,7 @@ class View2(discord.ui.View):
         user_ping = interaction.user.mention
         conn = sqlite3.connect(r'/escdb/escdb.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (message_id,))
+        cursor.execute('SELECT Worker FROM Meet WHERE ContractID = ?', (trashid,))
         registered_users = {row[0] for row in cursor.fetchall()}
 
         # Проверяем, записан ли пользователь
