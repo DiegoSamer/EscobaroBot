@@ -149,7 +149,7 @@ class CircuitsView2(discord.ui.View):
     def __init__(self, msg_id):
         super().__init__(timeout=None)
         self.user_count = 0
-        self.max_users = 2
+        self.max_users = 5
         self.message_id = msg_id  # Используем ID сообщения для сбора участников
 
     @discord.ui.button(label="Записаться", style=discord.ButtonStyle.secondary)
